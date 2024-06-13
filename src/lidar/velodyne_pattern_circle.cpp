@@ -59,8 +59,6 @@ using namespace std;
 using namespace sensor_msgs;
 using namespace pcl;
 
-#define DEBUG 0
-
 typedef Velodyne::Point PointType;
 typedef pcl::PointCloud<PointType> CloudType;
 
@@ -85,11 +83,9 @@ string ns_str;
 void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::ConstPtr& calib_cloud)
 {
 
-  if(DEBUG) ROS_INFO("[%s] Processing cloud...", ns_str.c_str());
+  ROS_DEBUG("[%s] Processing cloud...", ns_str.c_str());
 
-  CloudType::Ptr velo_cloud_pc (new CloudType),
-                                        calib_board_pc(new CloudType),
-                                        pattern_cloud(new CloudType);
+  CloudType::Ptr velo_cloud_pc (new CloudType), calib_board_pc(new CloudType), pattern_cloud(new CloudType);
 
   clouds_proc_++;
 
@@ -127,20 +123,6 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   coefficients_v(1) = coefficients->values[1];
   coefficients_v(2) = coefficients->values[2];
   coefficients_v(3) = coefficients->values[3];
-
-  // Get edges points by range
-  // vector<vector<PointType*> > rings = Velodyne::getRings(*velo_cloud_pc, laser_type);
-  // for (vector<vector<PointType*> >::iterator ring = rings.begin(); ring < rings.end(); ++ring){
-  //   if (ring->empty()) continue;
-
-  //   (*ring->begin())->intensity = 0;
-  //   (*(ring->end() - 1))->intensity = 0;
-  //   for (vector<PointType*>::iterator pt = ring->begin() + 1; pt < ring->end() - 1; pt++){
-  //     PointType *prev = *(pt - 1);
-  //     PointType *succ = *(pt + 1);
-  //     (*pt)->intensity = max( max( prev->range-(*pt)->range, succ->range-(*pt)->range), 0.f);
-  //   }
-  // }
 
   vector<int> indices_f1, indices_f2;
   pcl::removeNaNFromPointCloud(*velo_cloud_pc, *velo_cloud_pc, indices_f1);
@@ -292,7 +274,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     edges_centroid.x =  accx/it->indices.size();
     edges_centroid.y =  accy/it->indices.size();
     edges_centroid.z =  accz/it->indices.size();
-    if(DEBUG) ROS_INFO("Centroid %f %f %f", edges_centroid.x, edges_centroid.y, edges_centroid.z);
+    ROS_DEBUG("Centroid %f %f %f", edges_centroid.x, edges_centroid.y, edges_centroid.z);
   }
 
   // Extract circles
@@ -351,7 +333,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     center.z = zcoord_xyplane;
     // Make sure there is no circle at the center of the pattern or far away from it
     double centroid_distance = sqrt(pow(fabs(edges_centroid.x-center.x),2) + pow(fabs(edges_centroid.y-center.y),2));
-    if(DEBUG) ROS_INFO("Distance to centroid %f, should be in (%.2f, %.2f)", centroid_distance, centroid_distance_min_, centroid_distance_max_);
+    ROS_DEBUG("Distance to centroid %f, should be in (%.2f, %.2f)", centroid_distance, centroid_distance_min_, centroid_distance_max_);
     if (centroid_distance < centroid_distance_min_){
       valid = false;
       // ???
@@ -361,9 +343,9 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     }else if(centroid_distance > centroid_distance_max_){
       valid = false;
     }else{
-      if(DEBUG) ROS_INFO("Valid centroid");
+      ROS_DEBUG("Valid centroid");
       for(std::vector<std::vector <float> >::iterator it = found_centers.begin(); it != found_centers.end(); ++it) {
-        if(DEBUG) ROS_INFO("%f", sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2)));
+        ROS_DEBUG("%f", sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2)));
         if (sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2))<0.25){
           valid = false;
           break;
@@ -375,23 +357,23 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
         if(DEBUG) cout << "In schrodinger_pt" << endl;
         pcl::PointXYZ schrodinger_pt((*pt).x, (*pt).y, (*pt).z);
         double distance_to_cluster = sqrt(pow(schrodinger_pt.x-center.x,2) + pow(schrodinger_pt.y-center.y,2) + pow(schrodinger_pt.z-center.z,2));
-        // if(DEBUG) ROS_INFO("Distance to cluster: %lf", distance_to_cluster);
+        // ROS_DEBUG("Distance to cluster: %lf", distance_to_cluster);
         if(distance_to_cluster<circle_radius_+0.02){
           centroid_cloud_inliers.erase(pt);
           --pt; // To avoid out of range
         }
       }
-      // if(DEBUG) ROS_INFO("Remaining inliers %lu", centroid_cloud_inliers.size());
+      // ROS_DEBUG("Remaining inliers %lu", centroid_cloud_inliers.size());
     }
 
     if (valid){
-      // if(DEBUG) ROS_INFO("Valid circle found");
+      // ROS_DEBUG("Valid circle found");
       std::vector<float> found_center;
       found_center.push_back(center.x);
       found_center.push_back(center.y);
       found_center.push_back(center.z);
       found_centers.push_back(found_center);
-      // if(DEBUG) ROS_INFO("Remaining points in cloud %lu", copy_cloud->points.size());
+      // ROS_DEBUG("Remaining points in cloud %lu", copy_cloud->points.size());
     }
 
     // Remove inliers from pattern cloud to find next circle
@@ -400,7 +382,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     copy_cloud.swap(cloud_f);
     valid = true;
 
-    if(DEBUG) ROS_INFO("Remaining points in cloud %lu", copy_cloud->points.size());
+    ROS_DEBUG("Remaining points in cloud %lu", copy_cloud->points.size());
   }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr circle_center_cloud(new pcl::PointCloud<pcl::PointXYZ>);   // One frame of centers
@@ -520,29 +502,7 @@ int main(int argc, char **argv){
   nh_.param<std::string>("ns", ns_str, "laser");
   nh_.param("laser_ring_num", rings_count, 16);
   findLaserType(rings_count);
-  // switch (rings_count)
-  // {
-  // case 16:
-  //   laser_type = VELO_16;
-  //   ROS_INFO("LASER_TYPE: VELO_16");
-  //   break;
-  // case 32:
-  //   laser_type = VELO_32;
-  //   ROS_INFO("LASER_TYPE: VELO_32");
-  //   break;
-  // case 64:
-  //   laser_type = VELO_64;
-  //   ROS_INFO("LASER_TYPE: VELO_64");
-  //   break;
-  // case 128:
-  //   laser_type = VELO_128;  
-  //   ROS_INFO("LASER_TYPE: VELO_128");
-  //   break;
-  // default:
-  //   ROS_WARN("Invalid 'laser_ring_num'!!!");
-  //   break;
-  // }
-
+  
   range_pub = nh_.advertise<PointCloud2> ("range_filtered_velo", 1);
   edges_pub = nh_.advertise<PointCloud2> ("edges_cloud", 1);
   pattern_plane_edges_pub = nh_.advertise<PointCloud2> ("plane_edges_cloud", 1);

@@ -59,8 +59,6 @@ using namespace std;
 using namespace sensor_msgs;
 using namespace pcl;
 
-#define DEBUG 0
-
 typedef Ouster::Point PointType;
 typedef pcl::PointCloud<PointType> CloudType;
 
@@ -86,7 +84,7 @@ string ns_str;
 void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::ConstPtr& calib_cloud)
 {
 
-  if(DEBUG) ROS_INFO("[%s/circle] Processing cloud...", ns_str.c_str());
+  ROS_DEBUG("[%s/circle] Processing cloud...", ns_str.c_str());
 
   CloudType::Ptr velo_cloud_pc (new CloudType), pattern_cloud(new CloudType);
   pcl::PointCloud<pcl::PointXYZI>::Ptr calib_board_pc(new pcl::PointCloud<pcl::PointXYZI>);
@@ -125,9 +123,10 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
 
   if (inliers->indices.size () == 0)
   {
-    ROS_WARN("[%s] Could not estimate a planar model for the given dataset.", ns_str.c_str());
+    ROS_WARN("[%s/circle] Could not estimate a planar model for the given dataset.", ns_str.c_str());
     return;
   }
+  ROS_DEBUG("[%s/circle] plane_segmentation: success", ns_str.c_str());
 
   // Copy coefficients to proper object for further filtering
   Eigen::VectorXf coefficients_v(4);
@@ -135,20 +134,6 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   coefficients_v(1) = coefficients->values[1];
   coefficients_v(2) = coefficients->values[2];
   coefficients_v(3) = coefficients->values[3];
-
-  // Get edges points by range
-  // vector<vector<PointType*> > rings = Ouster::getRings(*velo_cloud_pc, laser_type);
-  // for (vector<vector<PointType*> >::iterator ring = rings.begin(); ring < rings.end(); ++ring){
-  //   if (ring->empty()) continue;
-
-  //   (*ring->begin())->intensity = 0;
-  //   (*(ring->end() - 1))->intensity = 0;
-  //   for (vector<PointType*>::iterator pt = ring->begin() + 1; pt < ring->end() - 1; pt++){
-  //     PointType *prev = *(pt - 1);
-  //     PointType *succ = *(pt + 1);
-  //     (*pt)->intensity = max( max( prev->range-(*pt)->range, succ->range-(*pt)->range), 0.f);
-  //   }
-  // }
 
   vector<int> indices_f1, indices_f2;
   pcl::removeNaNFromPointCloud(*velo_cloud_pc, *velo_cloud_pc, indices_f1);
@@ -181,6 +166,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     ROS_WARN("[%s] Could not detect pattern edges.", ns_str.c_str());
     return;
   }
+  ROS_DEBUG("[%s/circle] pattern edges were detected", ns_str.c_str());
 
   // Get points belonging to plane in pattern pointcloud
   pcl::SampleConsensusModelPlane<PointType>::Ptr dit (new pcl::SampleConsensusModelPlane<PointType> (edges_cloud));
@@ -201,7 +187,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
 
   // Remove kps not belonging to circles by coords
   pcl::PointCloud<pcl::PointXYZ>::Ptr circles_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  vector<vector<PointType*> > rings2 = Ouster::getRings(*pattern_cloud);
+  vector<vector<PointType*> > rings2 = Ouster::getRings(*pattern_cloud, laser_type);
   int ringsWithCircle = 0;
   for (vector<vector<PointType*> >::iterator ring = rings2.begin(); ring < rings2.end(); ++ring){
     if(ring->size() < 4){
@@ -227,18 +213,12 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     ROS_WARN("[%s] Too many outliers, not computing circles.", ns_str.c_str());
     return;
   }
+  ROS_DEBUG("[%s/circle] succeed in computing circles ", ns_str.c_str());
 
   sensor_msgs::PointCloud2 velocloud_ros2;
   pcl::toROSMsg(*circles_cloud, velocloud_ros2);
   velocloud_ros2.header = laser_cloud->header;
   pattern_pub.publish(velocloud_ros2);   // topic: /laser_pattern/pattern_circles
-
-  // Show circles cloud
-  // if(DEBUG) 
-  //   for(int i=0; i<circles_cloud->points.size(); i++){
-  //     // 
-  //     cout  << "Circle points " << i << ": " << circles_cloud->points[i].x << " " << circles_cloud->points[i].y << " " << circles_cloud->points[i].z << "\n";
-  //   }
 
   // Rotate cloud to face pattern plane
   pcl::PointCloud<pcl::PointXYZ>::Ptr xy_cloud(new pcl::PointCloud<pcl::PointXYZ>);
@@ -271,7 +251,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   auxpoint_pub.publish(ros_auxpoint);   // topic: /laser_pattern/rotated_pattern
 
   double zcoord_xyplane = auxrotated_cloud->at(0).z;
-  if(DEBUG) cout << "zcoord_xyplane = " << zcoord_xyplane << endl;
+  ROS_DEBUG("[%s/circle] zcoord_xyplane = %f", ns_str.c_str(), zcoord_xyplane);
 
   pcl::PointXYZ edges_centroid;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
@@ -286,7 +266,8 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   euclidean_cluster.setInputCloud (xy_cloud);
   euclidean_cluster.extract (cluster_indices);
 
-  if(DEBUG) cout << cluster_indices.size() << " clusters found from " << xy_cloud->points.size() << " points in cloud" << endl;
+  ROS_DEBUG("[%s/circle] %d clusters found from %d points in cloud", ns_str.c_str(), cluster_indices.size(), xy_cloud->points.size());
+
 
   for (std::vector<pcl::PointIndices>::iterator it=cluster_indices.begin(); it<cluster_indices.end(); ++it) {
     float accx = 0., accy = 0., accz = 0.;
@@ -299,7 +280,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     edges_centroid.x =  accx/it->indices.size();
     edges_centroid.y =  accy/it->indices.size();
     edges_centroid.z =  accz/it->indices.size();
-    if(DEBUG) ROS_INFO("Centroid %f %f %f", edges_centroid.x, edges_centroid.y, edges_centroid.z);
+    ROS_DEBUG("Centroid %f %f %f", edges_centroid.x, edges_centroid.y, edges_centroid.z);
   }
 
   // Extract circles
@@ -363,7 +344,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     center.z = zcoord_xyplane;
     // Make sure there is no circle at the center of the pattern or far away from it
     double centroid_distance = sqrt(pow(fabs(edges_centroid.x-center.x),2) + pow(fabs(edges_centroid.y-center.y),2));
-    if(DEBUG) ROS_INFO("Distance to centroid %f, should be in (%.2f, %.2f)", centroid_distance, centroid_distance_min_, centroid_distance_max_);
+    ROS_DEBUG("Distance to centroid %f, should be in (%.2f, %.2f)", centroid_distance, centroid_distance_min_, centroid_distance_max_);
     if (centroid_distance < centroid_distance_min_){
       valid = false;
       // ???
@@ -373,9 +354,9 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     }else if(centroid_distance > centroid_distance_max_){
       valid = false;
     }else{
-      if(DEBUG) ROS_INFO("Valid centroid");
+      ROS_DEBUG("Valid centroid");
       for(std::vector<std::vector <float> >::iterator it = found_centers.begin(); it != found_centers.end(); ++it) {
-        if(DEBUG) ROS_INFO("%f", sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2)));
+        ROS_DEBUG("%f", sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2)));
         if (sqrt(pow(fabs((*it)[0]-center.x),2) + pow(fabs((*it)[1]-center.y),2))<0.25){
           valid = false;
           break;
@@ -387,23 +368,23 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
         // if(DEBUG) cout << "In schrodinger_pt" << endl;
         pcl::PointXYZ schrodinger_pt((*pt).x, (*pt).y, (*pt).z);
         double distance_to_cluster = sqrt(pow(schrodinger_pt.x-center.x,2) + pow(schrodinger_pt.y-center.y,2) + pow(schrodinger_pt.z-center.z,2));
-        // if(DEBUG) ROS_INFO("Distance to cluster: %lf", distance_to_cluster);
+        // ROS_DEBUG("Distance to cluster: %lf", distance_to_cluster);
         if(distance_to_cluster<circle_radius_+0.02){
           centroid_cloud_inliers.erase(pt);
           --pt; // To avoid out of range
         }
       }
-      // if(DEBUG) ROS_INFO("Remaining inliers %lu", centroid_cloud_inliers.size());
+      // ROS_DEBUG("Remaining inliers %lu", centroid_cloud_inliers.size());
     }
 
     if (valid){
-      // if(DEBUG) ROS_INFO("Valid circle found");
+      // ROS_DEBUG("Valid circle found");
       std::vector<float> found_center;
       found_center.push_back(center.x);
       found_center.push_back(center.y);
       found_center.push_back(center.z);
       found_centers.push_back(found_center);
-      // if(DEBUG) ROS_INFO("Remaining points in cloud %lu", copy_cloud->points.size());
+      // ROS_DEBUG("Remaining points in cloud %lu", copy_cloud->points.size());
     }
 
     // Remove inliers from pattern cloud to find next circle
@@ -412,7 +393,7 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     copy_cloud.swap(cloud_f);
     valid = true;
 
-    if(DEBUG) ROS_INFO("Remaining points in cloud %lu", copy_cloud->points.size());
+    ROS_DEBUG("Remaining points in cloud %lu", copy_cloud->points.size());
   }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr circle_center_cloud(new pcl::PointCloud<pcl::PointXYZ>);   // One frame of centers
@@ -475,10 +456,10 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   // Compute circles centers
   // Publish cumulative center cloud
   getCenterClusters(cumulative_cloud, centers_cloud, cluster_size_, nFrames/2, nFrames);
-  cout << "[getCenterClusters1] centers_cloud.size = " << centers_cloud->points.size() << endl;
+  ROS_DEBUG("[%s/circle] getCenterClusters1: centers_cloud.size = %d", ns_str.c_str(), centers_cloud->points.size());
   if (centers_cloud->points.size()>4){
     getCenterClusters(cumulative_cloud, centers_cloud, cluster_size_, 3.0*nFrames/4.0, nFrames);
-    cout << "[getCenterClusters2] centers_cloud.size = " << centers_cloud->points.size() << endl;
+    ROS_DEBUG("[%s/circle] getCenterClusters2: centers_cloud.size = %d", ns_str.c_str(), centers_cloud->points.size());
   }
 
   if (centers_cloud->points.size()==4){
@@ -568,26 +549,6 @@ int main(int argc, char **argv){
   debug_pub = nh_.advertise<PointCloud2> ("debug", 1);
   xy_cloud_pub = nh_.advertise<PointCloud2> ("xy_cloud", 1);
   coeff_pub = nh_.advertise<pcl_msgs::ModelCoefficients> ("plane_model", 1);
-
-  switch (rings_count)
-  {
-  case 32:
-    laser_type = OUSTER_32;
-    ROS_INFO("LASER_TYPE: OUSTER_32");
-    break;
-  case 64:
-    laser_type = OUSTER_64;
-    ROS_INFO("LASER_TYPE: OUSTER_64");
-    break;
-  case 128:
-    laser_type = OUSTER_128;
-    ROS_INFO("LASER_TYPE: OUSTER_128");
-    break;
-  
-  default:
-    ROS_WARN("Invalid 'laser_ring_num'!!!");
-    break;
-  }
 
   nFrames = 0;
   cumulative_cloud = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
