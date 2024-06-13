@@ -143,6 +143,8 @@ bash start_up.bash
 
    The type of sensor used is then displayed in the terminal. If it is judged to be a LiDAR-Camera suite, it will continue to prompt for <u>the full path of the camera parameter file (set in *Step 3.0*)</u>.
 
+   !!!update: Now you can just input the name of the camera parameter file. If you press 'Enter' without any input, it will use the default parameter file *path_to_your_pkg/data/camera_info/intrinsic.txt*.
+
    <img src="./fig/fig_lvt2calib_bashjudge.png" alt="fig_lvt2calib_bashjudge"  />
 
 2. LiDAR-LiDAR Calibration:

@@ -3,7 +3,7 @@
     <arg name="useDemo" default="false"/>
     <arg name="is_multi_exp" default="false"/>
     <arg name="is_auto_mode" default="false"/>
-	<arg name="cam_info_path" default="$(find lvt2calib)/data/camera_info/intrinsic.txt"/>
+	<arg name="cam_info_filename" default="intrinsic.txt"/>
     <arg name="ns_s1" default="laser"/>
     <arg name="ns_s2" default="camera"/>
     <arg name="l2c_calib" default="false"/>
@@ -14,7 +14,7 @@
             <arg name="useDemo" value="$(arg useDemo)"/>
             <arg name="is_auto_mode" value="$(arg is_auto_mode)"/>
             <arg name="is_multi_exp" value="$(arg is_multi_exp)"/>
-            <arg name="cam_info_path" value="$(arg cam_info_path)"/>
+            <arg name="cam_info_filename" value="$(arg cam_info_filename)"/>
             <arg name="ns_l" value="$(arg ns_s1)"/>
             <arg name="ns_c" value="$(arg ns_s2)"/>
         </include>

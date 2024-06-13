@@ -21,9 +21,9 @@ suite_type_code=-1
 # ns1="livox_horizon"
 # tp2="/rgb_cam/image_raw"
 # ns2="rgb"
-# cam_param_path="/home/jun/catkin_ws_lyy/src/thermalvox_calib/data/camera_info/horizon_thermal.txt"
+# cam_param_filename="/home/jun/catkin_ws_lyy/src/thermalvox_calib/data/camera_info/horizon_thermal.txt"
 
-cam_param_path="null"
+cam_param_filename="null"
 is_dark_board="false"
 is_compressed_image="false"
 max_frame=60
@@ -75,18 +75,18 @@ funcStartProcessLC()
     l_ns=$2
     c_tp=$3
     c_ns=$4
-    cam_info_path=$5
+    cam_info_filename=$5
 
     # pattern detection
     gnome-terminal --title="${l_ns}_pattern" -- bash -c "source $find_ws/devel/setup.bash;roslaunch lvt2calib ${l_ns}_pattern.launch cloud_tp:=${l_tp} ns_:=${l_ns}"
-    gnome-terminal --title="${c_ns}_pattern" -- bash -c "source $find_ws/devel/setup.bash;roslaunch lvt2calib ${c_ns}_cam_pattern.launch image_tp:=${c_tp} ns_:=${c_ns} cam_info_dir:=${cam_info_path} ifCompressed:=${is_compressed_image} isDarkBoard:=${is_dark_board}"
+    gnome-terminal --title="${c_ns}_pattern" -- bash -c "source $find_ws/devel/setup.bash;roslaunch lvt2calib ${c_ns}_cam_pattern.launch image_tp:=${c_tp} ns_:=${c_ns} cam_info_filename:=${cam_info_filename} ifCompressed:=${is_compressed_image} isDarkBoard:=${is_dark_board}"
     
     # feature collection
     gnome-terminal --title="l2c_collection" -- bash -c "source $find_ws/devel/setup.bash;roslaunch lvt2calib pattern_collection.launch l2c_calib:=true ns_s1:=${l_ns} ns_s2:=${c_ns} max_frame:=${max_frame};exec bash"
 
     # calibration
     source $find_ws/devel/setup.bash
-    roslaunch lvt2calib extrinsic_calib.launch l2c_calib:=true ns_s1:=${l_ns} ns_s2:=${c_ns} cam_info_path:=${cam_info_path} is_auto_mode:=true
+    roslaunch lvt2calib extrinsic_calib.launch l2c_calib:=true ns_s1:=${l_ns} ns_s2:=${c_ns} cam_info_filename:=${cam_info_filename} is_auto_mode:=true
 }
 
 ARGS=`getopt -o "dcf:" -l "darkBoard,compressedImg,maxFrame:" -n "start_up.bash" -- "$@"`
@@ -219,9 +219,13 @@ then
         ;;
         1)
         echo -e "LiDAR to Camera Calibration"
-        read -p "camera intrinsic param filepath: " cam_param_path
+        read -p "camera intrinsic param filename: " cam_param_filename
+        if [ -z "$cam_param_filename" ];then
+            cam_info_filename="intrinsic.txt"
+            echo -e "use default camera intrinsic param file: intrinsic.txt"
+        fi
         echo ""
-        funcStartProcessLC $tp1 $ns1 $tp2 $ns2 $cam_param_path
+        funcStartProcessLC $tp1 $ns1 $tp2 $ns2 $cam_param_filename
         ;;
     esac
 fi

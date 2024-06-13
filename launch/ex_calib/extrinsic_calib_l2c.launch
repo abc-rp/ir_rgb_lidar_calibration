@@ -3,7 +3,7 @@
     <arg name="useDemo" default="false"/>
     <arg name="is_multi_exp" default="false"/>
     <arg name="is_auto_mode" default="false"/>
-	<arg name="cam_info_path" default="$(find lvt2calib)/data/camera_info/intrinsic.txt"/>
+    <arg name="cam_info_filename" default="intrinsic.txt"/>
     <arg name="ns_l" default="laser"/>
     <arg name="ns_c" default="camera"/>
     <arg name="featureFileName" default="features_info_$(arg ns_l)_to_$(arg ns_c)"/>
@@ -23,7 +23,7 @@
         
         <!-- for applictaion -->
         <param name="calib_result_dir_" type="string" value="$(find lvt2calib)/data/calibration_result/" unless="$(arg useDemo)"/>
-        <param name="camera_info_dir_" type="string" value="$(arg cam_info_path)" unless="$(arg useDemo)"/>
+        <param name="camera_info_dir_" type="string" value="$(find lvt2calib)/data/camera_info/$(arg cam_info_filename)" unless="$(arg useDemo)"/>
         <param name="features_info_dir_" type="string" value="$(find lvt2calib)/data/pattern_collection_result/$(arg featureFileName).csv" unless="$(arg useDemo)"/> 
         <param name="calib_result_name_" type="string" value="$(arg calib_result_name)" unless="$(arg useDemo)"/>
         <param name="points_visual_on" type="bool" value="false"/>

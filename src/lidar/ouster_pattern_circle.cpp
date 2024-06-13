@@ -136,8 +136,20 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
   coefficients_v(3) = coefficients->values[3];
 
   vector<int> indices_f1, indices_f2;
-  pcl::removeNaNFromPointCloud(*velo_cloud_pc, *velo_cloud_pc, indices_f1);
-  pcl::removeNaNFromPointCloud(*calib_board_pc, *calib_board_pc, indices_f2);
+  CloudType::Ptr velo_cloud_pc_valid(new CloudType);
+  pcl::PointCloud<pcl::PointXYZI>::Ptr calib_board_pc_valid(new pcl::PointCloud<pcl::PointXYZI>);
+
+  // cout << "velo_cloud_pc size1: " << velo_cloud_pc->points.size() << endl;
+  pcl::removeNaNFromPointCloud(*velo_cloud_pc, *velo_cloud_pc_valid, indices_f1);
+  // cout << "velo_cloud_pc size2: " << velo_cloud_pc_valid->points.size() << endl;
+
+  // cout << "calib_board_pc size1: " << calib_board_pc->points.size() << endl;
+  pcl::removeNaNFromPointCloud(*calib_board_pc, *calib_board_pc_valid, indices_f2);
+  // cout << "calib_board_pc size2: " << calib_board_pc_valid->points.size() << endl;
+
+  pcl::copyPointCloud(*velo_cloud_pc_valid, *velo_cloud_pc);
+  pcl::copyPointCloud(*calib_board_pc_valid, *calib_board_pc);
+
   CloudType::Ptr edges_cloud(new CloudType);
   pcl::PointCloud<pcl::PointXYZ>::Ptr calib_board_pc_copy(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::copyPointCloud(*calib_board_pc, *calib_board_pc_copy);
@@ -149,7 +161,8 @@ void callback(const PointCloud2::ConstPtr& laser_cloud, const PointCloud2::Const
     vector<float> pointNKNSquaredDistance;
     pcl::PointXYZ searchP;
     pcl::copyPoint(*pt, searchP);
-    if(kdtree.nearestKSearch(searchP, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+    ROS_DEBUG("serachP: %f %f %f ", searchP.x, searchP.y, searchP.z);
+    if (kdtree.nearestKSearch(searchP, 1, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
     {
       // cout << "pointNKNSquaredDistance: " << pointNKNSquaredDistance[0] << endl;
       if(pointNKNSquaredDistance[0] <= edge_knn_radius_)
