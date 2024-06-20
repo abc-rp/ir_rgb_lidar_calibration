@@ -4,4 +4,4 @@ devel/
 .vscode/
 data/pattern_collection_result/
 data/calibration_result/
-
+data/data/camera_info
