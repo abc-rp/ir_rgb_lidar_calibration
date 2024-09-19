@@ -22,7 +22,7 @@
 
    (Note: this value is not a specific point cloud size but a ratio.)
 
-3. (Not recommend to prioritize) The threshold for board detection is too strict. You can adjust the values of '*rmse_ukn2tpl_thre*' and '*rmse_tpl2ukn_thre*'. The larger these values are, the more lenient the detection criteria become. However, please note that these values will affect the accuracy of board detection. It is recommended to adjust them in the range of [0.2, 0.5].
+3. (Not recommend to prioritize) The threshold for board detection is too strict. You can adjust the values of '*rmse_ukn2tpl_thre*' and '*rmse_tpl2ukn_thre*'. The larger these values are, the more lenient the detection criteria become. However, please note that these values will affect the accuracy of board detection. It is recommended to adjust them in the range of [0.02, 0.05].
 
    
 
