@@ -1,0 +1,7 @@
+digraph G {
+"stereo" -> "stereo_camera"[label="Broadcaster: /rgb/stereo_ros_tf\nAverage rate: 10.197 Hz\nMost recent transform: 1725550717.988 ( -0.045 sec old)\nBuffer length: 4.904 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1725550717.943"[ shape=plaintext ] ;
+ }->"stereo";
+}

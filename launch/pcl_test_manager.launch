@@ -1,0 +1,12 @@
+<launch>
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" output="screen" args="manager"/>
+
+  <node pkg="nodelet" type="nodelet" name="pass_through_x" output="screen"
+        args="load pcl/PassThrough pcl_manager">
+    <remap from="input" to="/ouster/points"/>
+    <remap from="output" to="/ouster/points/x_filtered"/>
+    <param name="filter_field_name" value="x"/>
+    <param name="filter_limit_min" value="-0.1"/>
+    <param name="filter_limit_max" value="0.1"/>
+  </node>
+</launch>

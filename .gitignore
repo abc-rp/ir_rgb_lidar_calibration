@@ -2,6 +2,14 @@
 build/
 devel/
 .vscode/
+
+# Ignore rosbags
 data/pattern_collection_result/
 data/calibration_result/
 data/data/camera_info
+data/livox_rgb_thermal_rosbag
+data/OS2
+data/ouster_livox_bag
+data/rgb-thermal-calibration
+data/rosbag_lvt2calib
+
