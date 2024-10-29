@@ -215,7 +215,7 @@ then
         echo -e "LiDAR to Camera Calibration"
         read -p "camera intrinsic param filename: " cam_param_filename
         if [ -z "$cam_param_filename" ];then
-            cam_info_filename="right_camera.txt"
+            cam_info_filename="ideal_camera_calibration.txt"
             echo -e "using default camera intrinsic param file: ${cam_info_filename}"
         fi
         echo ""
