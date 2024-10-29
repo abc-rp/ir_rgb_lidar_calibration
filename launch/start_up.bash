@@ -7,7 +7,7 @@ camera_types=("rgb" "thermal")
 suite_types=("ll" "lc")
 
 # Replace with your actual Distrobox container name
-container_name="thermal-calib"
+container_name="noetic"
 
 # lidar type: 1:repetitive scan lidar 2:no-repetitive scan lidar 3: camera
 sensor_type_code1=0
