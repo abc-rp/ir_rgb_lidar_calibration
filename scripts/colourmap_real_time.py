@@ -2,102 +2,106 @@
 import rospy
 import cv2
 import numpy as np
-import os
-import rospkg
 from sensor_msgs.msg import CompressedImage
 from cv_bridge import CvBridge
 
-# Load calibration file
-def load_calibration(calibration_file):
-    print(f"Loading calibration from {calibration_file}")
-    with open(calibration_file, "r") as file:
-        lines = file.readlines()
-    calib_data = {}
-    for line in lines:
-        line = line.strip()
-        if line:
-            key, value = line.split(':', 1)
-            key = key.strip()
-            value = value.strip()
-            calib_data[key] = value
-    K_values = [float(x) for x in calib_data['K'].split()]
-    D_values = [float(x) for x in calib_data['D'].split()]
-    K = np.array(K_values).reshape(3, 3)
-    D = np.array(D_values).reshape(1, len(D_values))
-    print(f"Calibration loaded: K={K}, D={D}")
-    return K, D
+# Normalize the image data to the range [0, 255]
+def normalize_image(image):
+    try:
+        # Normalize the image to span the full grayscale range [0, 255]
+        normalized_image = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
+        return normalized_image
+    except Exception as e:
+        print(f"Error normalizing image: {e}")
+        return image  # Return original image in case of failure
 
-# Undistort image using fisheye calibration
-def undistort_fisheye(image, K, D):
-    h, w = image.shape[:2]
-    DIM = (w, h)
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(
-        K, D, np.eye(3), K, DIM, cv2.CV_16SC2
-    )
-    undistorted_image = cv2.remap(
-        image, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT
-    )
-    return undistorted_image
+# Apply a color map to a thermal image
+def apply_colormap(image):
+    try:
+        # Apply a colormap (e.g., COLORMAP_BONE) to the grayscale thermal image
+        colored_image = cv2.applyColorMap(image, cv2.COLORMAP_BONE)
+        return colored_image
+    except Exception as e:
+        print(f"Error applying color map: {e}")
+        return image  # Return original image in case of failure
 
-# Image callback function for compressed image
-def image_callback(msg, args):
-    K, D, bridge, undistorted_pub, camera_name = args
-    print(f"Compressed image received for {camera_name}. Decoding...")
+# Image callback function for compressed thermal image
+def thermal_image_callback(msg, args):
+    bridge, colormap_pub, camera_name = args
+    print(f"Compressed thermal image received for {camera_name}. Decoding...")
 
     try:
+        # Fetch the latest threshold value dynamically
+        threshold_param = rospy.get_param("/thermal_image_colormap_dual/threshold", None)
+        print(f"Current threshold parameter value: {threshold_param}")
+
+        # Determine the threshold value
+        if threshold_param is None or str(threshold_param).lower() == 'none':
+            threshold = None
+        else:
+            try:
+                threshold = float(threshold_param)
+            except ValueError:
+                print(f"Invalid threshold value: {threshold_param}. Using None.")
+                threshold = None
+
         # Convert compressed image message to OpenCV image
         np_arr = np.frombuffer(msg.data, np.uint8)
-        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        cv_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)  # Decoding as grayscale image
 
-        # Undistort the image
-        undistorted_image = undistort_fisheye(cv_image, K, D)
+        # Normalize the thermal image to [0, 255]
+        normalized_image = normalize_image(cv_image)
 
-        # Convert undistorted image back to ROS message and publish
-        undistorted_msg = bridge.cv2_to_compressed_imgmsg(undistorted_image)
-        undistorted_msg.header = msg.header  # Preserve the header
-        undistorted_pub.publish(undistorted_msg)
-        print(f"Published undistorted image for {camera_name}.")
+        # Apply thresholding if threshold is not None
+        if threshold is not None:
+            # Ensure threshold is within [0, 255]
+            threshold = np.clip(threshold, 0, 255)
+            # Apply threshold: set pixels below threshold to zero
+            _, thresholded_image = cv2.threshold(normalized_image, threshold, 255, cv2.THRESH_TOZERO)
+            # Do not apply colormap; use the normalized and thresholded image
+            output_image = thresholded_image
+        else:
+            # Apply the color map to the normalized image
+            output_image = apply_colormap(normalized_image)
+
+        # Ensure the image is uint8
+        output_image = output_image.astype(np.uint8)
+
+        # Convert the image back to ROS message and publish
+        colored_image_msg = bridge.cv2_to_compressed_imgmsg(output_image)
+        colored_image_msg.header = msg.header  # Preserve the header
+        colormap_pub.publish(colored_image_msg)
+        print(f"Published thermal image for {camera_name}.")
 
     except Exception as e:
-        print(f"Error in image callback for {camera_name}: {e}")
+        print(f"Error in thermal image callback for {camera_name}: {e}")
 
 def main():
-    rospy.init_node("image_undistorter", anonymous=True)
+    rospy.init_node("thermal_image_colormap_dual", anonymous=True)
 
-    # Use ROS parameters or defaults
-    left_camera_topic = rospy.get_param("~left_camera_topic", "/left_camera/image_color/compressed")
-    right_camera_topic = rospy.get_param("~right_camera_topic", "/right_camera/image_color/compressed")
+    # Topics for the left and right IR cameras
+    left_thermal_camera_topic = "/left_ir_camera/image_raw/compressed"
+    right_thermal_camera_topic = "/right_ir_camera/image_raw/compressed"
 
-    undistorted_left_topic = rospy.get_param("~undistorted_left_topic", "/left_camera/image_color/undistorted/compressed")
-    undistorted_right_topic = rospy.get_param("~undistorted_right_topic", "/right_camera/image_color/undistorted/compressed")
-
-    # Get package path
-    rospack = rospkg.RosPack()
-    package_path = rospack.get_path('ir-rgb-lidar-calibration') 
-
-    # Calibration files relative to package path
-    left_calibration_file = os.path.join(package_path, 'data', 'rgb-thermal-calibration', 'left_camera', 'left_camera.txt')
-    right_calibration_file = os.path.join(package_path, 'data', 'rgb-thermal-calibration', 'right_camera', 'right_camera.txt')
-
-    # Load calibration parameters for both cameras
-    left_K, left_D = load_calibration(left_calibration_file)
-    right_K, right_D = load_calibration(right_calibration_file)
+    # Topics for publishing color-mapped images
+    left_colored_thermal_topic = "/left_ir_camera/image_colormap/compressed"
+    right_colored_thermal_topic = "/right_ir_camera/image_colormap/compressed"
 
     # Bridge for converting between ROS and OpenCV images
     bridge = CvBridge()
 
-    # Publishers for the undistorted images
-    undistorted_left_pub = rospy.Publisher(undistorted_left_topic, CompressedImage, queue_size=10)
-    undistorted_right_pub = rospy.Publisher(undistorted_right_topic, CompressedImage, queue_size=10)
+    # Publishers for the thermal images
+    left_colormap_pub = rospy.Publisher(left_colored_thermal_topic, CompressedImage, queue_size=10)
+    right_colormap_pub = rospy.Publisher(right_colored_thermal_topic, CompressedImage, queue_size=10)
 
-    # Subscribe to both camera topics
-    rospy.Subscriber(left_camera_topic, CompressedImage, image_callback, 
-                     (left_K, left_D, bridge, undistorted_left_pub, "left_camera"))
-    rospy.Subscriber(right_camera_topic, CompressedImage, image_callback, 
-                     (right_K, right_D, bridge, undistorted_right_pub, "right_camera"))
+    # Subscribe to both the left and right thermal camera topics
+    rospy.Subscriber(left_thermal_camera_topic, CompressedImage, thermal_image_callback,
+                     (bridge, left_colormap_pub, "left_ir_camera"))
+    rospy.Subscriber(right_thermal_camera_topic, CompressedImage, thermal_image_callback,
+                     (bridge, right_colormap_pub, "right_ir_camera"))
 
-    print(f"Subscribed to {left_camera_topic} and {right_camera_topic}.")
-    print(f"Publishing undistorted images to {undistorted_left_topic} and {undistorted_right_topic}.")
+    print(f"Subscribed to {left_thermal_camera_topic} and {right_thermal_camera_topic}.")
+    print(f"Publishing thermal images to {left_colored_thermal_topic} and {right_colored_thermal_topic}.")
 
     # Keep the node alive
     rospy.spin()
