@@ -1,12 +1,12 @@
-# IR-RGB-LiDAR Calibration: 
-**Based on (IV 2023) LVT2Calib: Automatic and Unified Extrinsic Calibration Toolbox for Different 3D LiDAR, Visual Camera and Thermal Camera**
+# IR-RGB-LiDAR Calibration
+
+**Based on (IV 2023) LVT2Calib: Automatic and Unified Extrinsic Calibration Toolbox for Different 3D LiDAR, Visual Camera, and Thermal Camera**
 
 This fork enhances the original LVT2Calib with specific improvements tailored to xRI's use case, focusing on streamlining IR-RGB-LiDAR calibration workflows. Notable enhancements include an improved calibration board design and better support for fisheye lenses.
 
-For troubleshooting, please refer to the ```docs``` folder, which contains the original documentation. Alternatively, you can visit the original repository's **"Issues"** section for support.
+For troubleshooting, please refer to the `docs` folder, which contains the original documentation. Alternatively, you can visit the original repository's **"Issues"** section for support.
 
-<img src="./fig/fig_lvt2calib_overview.png" alt="fig_lvt2calib_overview" style="zoom: 20%;" />
-
+![fig_lvt2calib_overview](./fig/fig_lvt2calib_overview.png)
 
 ## Introduction
 
@@ -16,60 +16,61 @@ A four-circular-hole calibration board is adopted, enabling the calibration of t
 
 This approach is ideal for xRI's use case, allowing for accurate extrinsic calibration between Ouster LiDAR, Velodyne LiDAR, RGB cameras, and IR cameras interchangeably.
 
-## How to use
+## How to Use
 
-### Step1: Environment Configuration
+### Step 1: Environment Configuration
 
-This method can be used in real-time or with pre-recorded ROS bags. As a rough guideline when running the program, it's recommended to use at least 6 positions, each held for at least 10 seconds long, with the calibration board placed in varying positions and orientations.
+This method can be used in real-time or with pre-recorded ROS bags. As a rough guideline when running the program, it's recommended to use at least 6 positions, each held for at least 10 seconds, with the calibration board placed in varying positions and orientations.
 
-#### 1.1 Install environment and driver
+#### 1.1 Install Environment and Drivers
 
-Install the ROS environment, along with the SDK and driver for the specific LiDAR being used. You can skip this step if the environment and drivers are already installed (which they should be on BESS).
+Install the ROS environment, along with the SDK and driver for the specific LiDAR being used. You can skip this step if the environment and drivers are already installed (which they should be on BESS2).
 
-#### 1.2 Denpendency
+#### 1.2 Dependencies
 
 Tested with Ubuntu 20.04 64-bit.
 
-- ROS noetic running on container called "noetic"
+- ROS Noetic running on a container called "noetic"
 - PCL 1.10
 - [Eigen3](http://eigen.tuxfamily.org/index.php?title=Main_Page)
-- [Ceres-solver](http://ceres-solver.org/) (1.14.0)
+- [Ceres Solver](http://ceres-solver.org/) (1.14.0)
 - OpenCV 4.2.0
-- pacakge.xml
+- `package.xml`
 
-### Step2: Preparation
+### Step 2: Preparation
 
-#### 2.1 Download and installation
+#### 2.1 Download and Installation
 
-Download this repo and compile it.
+Download this repository and compile it:
 
-```
+```bash
 git clone https://github.com/abc-rp/ir-rgb-lidar-calibration
-...
 cd path_to_your_ir-rgb-lidar-calibration_ws
 rosdep install --from-paths src --ignore-src -r -y
 catkin_make
 source devel/setup.bash
 ```
 
-To trial the repository, you may want to download and test it with the calibration rosbags from OneDrive: [rosbag_lvt2calib](https://entuedu-my.sharepoint.com/:f:/g/personal/jzhang061_e_ntu_edu_sg/ElG9hWBSDrRAjaftVeatWzcBDZI-JxeKb3jmu5lMEPfyGw?e=jZvjdj):
+To trial the repository, you may want to download and test it with their calibration ROS bags from OneDrive:
 ```
 https://entuedu-my.sharepoint.com/:f:/g/personal/jzhang061_e_ntu_edu_sg/ElG9hWBSDrRAjaftVeatWzcBDZI-JxeKb3jmu5lMEPfyGw?e=jZvjdj
+
 ```
 <img src="./fig/fig_lvt2calib_demobag.png" alt="fig_lvt2calib_demobag" style="zoom: 80%;" />
 
-#### 2.2 Preparing the calibration board
+#### 2.2 Preparing the Calibration Board
 
 <img src="./fig/fig_lvt2calib_calibboard.png" alt="fig_lvt2calib_calibboard" style="zoom: 50%;" />
 
 Due to difficulties sourcing the silicone heating pad used in the original repo, we have created a more accessible alternative. Our calibration board is made from an 18mm thick plywood board with 1.2mm thick aluminum sheets mounted on top. The plywood is routed with a trench to fit a 5m pipe heating cable, which is easy to source. The cable is then covered with a thick layer of aluminum tape, followed by the aluminum sheeting. Instructions on fabricating the board can be found in the ```docs``` folder.
 
 <img src="./fig/fig_lvt2calib_calibboard_real.png" alt="fig_lvt2calib_calibboard_real" style="zoom:80%;" />
-To ensure smooth and successful calibration, please take note of the following recommendations:
 
-1. Choose a relatively empty environment with minimal reflections on the ground for the calibration scene.
+To ensure smooth and successful calibration, consider the following recommendations:
+
+1. Choose a relatively empty environment with flat and uncluttered backdrop for the calibration scene.
 2. Avoid obvious reflections on the ground (to prevent interference in the thermal camera's view).
-3. The heating temperature of the calibration plate should not be too high to prevent deformation but should still have a noticeable difference from the ambient temperature.
+3. The heating temperature of the calibration plate should not be too high to prevent deformation but should still have a noticeable difference from the ambient temperature (Our soutlion cannot reach these temps).
 4. Place the calibration board on a stable support during the calibration process.
 5. The distance from the thermal camera to the calibration board should be between 3m and 6m (to ensure image clarity).
 6. A heated blanket is recommended to insulate the board between positions and heating before calibration when calirbating thermal sensors.
@@ -79,12 +80,13 @@ To ensure smooth and successful calibration, please take note of the following r
 #### 3.0 Camera Intrinsics
 
 ##### Fisheye Lenses (xRI RGB Cameras)
-The original repository does not account for fisheye lens distortion, only conventional lenses. To address this ```undistort_bag.py``` and ```undistort_real_time.py``` may be used to publish and rectify undistorted images to:```"/("left" or "right")_camera/image_color/undistorted/compressed"``` or within rosbags. In this case, an undistorted rectification matrix (for a theoretically undistorted image) should be parsed when the camera parameter file is requested when running ```start_up.bash```. If you do not specify a path to a calibration file the defualt is an undistorted rectification matrix. 
+The original repository does not account for fisheye lens distortion, only conventional lenses. To address this, ```undistort_bag.py``` and ```undistort_real_time.py``` may be used to publish and rectify undistorted images to ```"/("left" or "right")_camera/image_color/undistorted/compressed"``` or within ROS bags. In this case, an undistorted rectification matrix (for a theoretically undistorted image) should be parsed when the camera parameter file is requested when running ```start_up.bash```. If you do not specify a path to a calibration file the defualt is an undistorted rectification matrix. 
 
 ##### Conventional Lenses (xRI IR Cameras)
-For cameras with conventional lenses (such as xRI's thermal cameras), the aforementioned scripts are unnecessary. Instead, the camera's intrinsic rectification matrix should be parsed into the script when promopted after running ```start_up.bash```.
 
-##### Intrinsic file format
+For cameras with conventional lenses (such as xRI's thermal cameras), the aforementioned scripts are unnecessary. Instead, the camera's intrinsic rectification matrix should be parsed into the script when prompted after running ```start_up.bash```.
+
+##### Intrinsic File Format
 
 The cameras intrinsic calibration parameters should be saved as `xxx.txt` in folder `(ir-rgb-lidar-calibration path)/data/camera_info`. The file format should be:
 
@@ -184,6 +186,20 @@ Refering to the current terminal as T0. Upon entering the command and pressing '
 
 #### 3.2 Feature Extraction
 
+##### Setting parameters
+
+During calibration, it may be necessary to edit the parameters, specfically the Pass-through filter which limits the amount of points in the point cloud.
+
+To do this, run:
+
+```shell
+rosrun rqt_reconfigure rqt_reconfigure
+```
+
+Vary the X and Y ranges, a good starting point is 5m.
+
+It may be required to view the point cloud in the rviz window (View Topic "(ns_lidar)/laser_pattern/cloud_in") and vary the values in reconfig as required.
+
 ***This step is crucial for accurate feature extraction and obtaining precise extrinsic parameters.**
 
 1. For Camera
@@ -202,7 +218,7 @@ Refering to the current terminal as T0. Upon entering the command and pressing '
 
    <img src="./fig/fig_lvt2calib_board_laser.png" alt="fig_lvt2calib_board_laser" style="zoom:45%;" />
 
-***If any issues at this stage, like the camera not detection the four-hole pattern or the LiDAR not recongnizing the carlibtion board, please check the [HELP.md](./HELP.md) for solutions.**
+***If any issues at this stage, like the camera not detection the four-hole pattern or the LiDAR not recongnizing the carlibtion board, please check the [HELP.md](./docs/HELP.md) for solutions.**
 
 <u>Continue with the following steps....</u>
 
@@ -227,7 +243,7 @@ Refering to the current terminal as T0. Upon entering the command and pressing '
    - If yes, **input 'y'/'Y' followed by 'Enter'. The program will return to the 'READY' interface in step 3.3.1**. You can then adjust the calibration board's position and proceed with a **new round of feature data collection from step 3.2**. (Our paper suggests 9 positions or more)
    - If no, input 'n'/'N' followed by 'Enter' (Note: Please do not directly key *ctrl+c*). The feature detection and collection programs will end while the extrinsic parameter calculation starts (continue to step 3.4).
 
-​	***If the collection takes to long, refer to [HELP.md](./HELP.md) to adjust the preset accumulation frame number.**
+​	***If the collection takes to long, refer to [HELP.md](./docs/HELP.md) to adjust the preset accumulation frame number.**
 
 #### 3.4 Extrinsic Parameter Calculation
 
@@ -312,7 +328,7 @@ TC: Thermal Camera
 
 #### II. Parameter Description for Nodes
 
-Please refer to [HELP.md](./HELP.md).
+Please refer to [HELP.md](./docs/HELP.md).
 
 #### III. Paper
 
