@@ -3,6 +3,9 @@ build/
 devel/
 .vscode/
 
+# Removes the orginal repos docker image
+docker/
+
 # Ignore rosbags
 data/pattern_collection_result/
 data/calibration_result/
@@ -13,3 +16,9 @@ data/ouster_livox_bag
 data/rgb-thermal-calibration
 data/rosbag_lvt2calib
 
+# Ignore old calibration files
+data/camera_info/intrinsic.txt
+
+# Ignore old config
+config/old
+config/default

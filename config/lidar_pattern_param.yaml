@@ -35,7 +35,7 @@ sor_StddevMulThresh: 1
 
 # intensity filter          
 i_filter_out_min: 0.0
-i_filter_out_max: 30.0 
+i_filter_out_max: 80.0 
 # 20 ~ 50 
 
 # boundary estimation: to estimate the surface boundary based on the normal estimation 
@@ -43,9 +43,9 @@ boundEstRad: 30
 normEstRad: 50
 
 # template matching criterion 
-rmse_ukn2tpl_thre: 0.03
+rmse_ukn2tpl_thre: 0.05
 # 0.03 ~ 0.05 
-rmse_tpl2ukn_thre: 0.03
+rmse_tpl2ukn_thre: 0.05
 # 0.03 ~ 0.05 
 
 # center extraction: based on circle extraction 

@@ -7,6 +7,12 @@
 1. Confirm the calibration board's color matched what was set during the execution of start_up.bash (`darkBoard` or `whiteBoard`)
 2. Ensure enough board-background contrast.
 3. Watch for board reflections in reflective environments (especially for the thermal camera)
+4. In the case of the IR cameras, when running the `colourmap_real_time.py` script, it is possible to vary the contrast threshold (between 0-255)to further isolate the board using:
+```shell
+rosparam set /thermal_image_colormap_dual/threshold 120
+```
+Here, the threshold was set to a value of 120, which is a reasonable starting value.
+5. In the case of the RGB cameras, it may be useful or necessary to adjust the exposure. By default, on the BESS, this is a fixed value. It can be modified to isolate the target or reverted to be automatic.
 
 #### Q2: The board detetcion in LiDAR failed (step 3.2)
 
@@ -28,7 +34,7 @@
 
 #### Q3: The feature collection takes too long (step 3.3)
 
-1. The default number of collection frame in the code is 60 frames, which has been found to be optimal through experiments. You can reduce this value as needed by specifying the '*maxFrame*' argument when running `start_up.bash`
+1. The default number of collection frame in the code is 60 frames, which has been found to be optimal through experiments. This is not the framerate of capture but rather the number of frames required for the capture of a given target position to be complete. You can reduce this value as needed by specifying the '*maxFrame*' argument when running `start_up.bash`
 
    ```shell
    # set the number of collection frame as 30
