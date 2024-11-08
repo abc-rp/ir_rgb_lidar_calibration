@@ -62,7 +62,7 @@ https://entuedu-my.sharepoint.com/:f:/g/personal/jzhang061_e_ntu_edu_sg/ElG9hWBS
 
 <img src="./fig/fig_lvt2calib_calibboard.png" alt="fig_lvt2calib_calibboard" style="zoom: 50%;" />
 
-Due to difficulties sourcing the silicone heating pad used in the original repo, we have created a more accessible alternative. Our calibration board is made from an 18mm thick plywood board with 1.2mm thick aluminum sheets mounted on top. The plywood is routed with a trench to fit a 5m pipe heating cable, which is easy to source. The cable is then covered with a thick layer of aluminum tape, followed by the aluminum sheeting. Instructions on fabricating the board can be found in the ```docs``` folder.
+Due to difficulties sourcing the silicone heating pad used in the original repo, we have created a more accessible alternative. Our calibration board is made from an 18mm thick plywood board with 1.2mm thick aluminum sheets mounted on top. The plywood is routed with a trench to fit a 5m pipe heating cable, which is easy to source. The cable is then covered with a thick layer of aluminum tape, followed by the aluminum sheeting. Instructions on fabricating the board are not detailed but can be requested.
 
 <img src="./fig/fig_lvt2calib_calibboard_real.png" alt="fig_lvt2calib_calibboard_real" style="zoom:80%;" />
 

@@ -84,7 +84,7 @@ def image_callback(msg, args):
         print(f"Error in image callback for {camera_name}: {e}")
 
 def main():
-    rospy.init_node("image_undistorter", anonymous=True)
+    rospy.init_node("image_undistorter")  # Removed anonymous=True
 
     # Use ROS parameters or defaults
     left_camera_topic = rospy.get_param("~left_camera_topic", "/left_camera/image_color/compressed")
