@@ -48,11 +48,37 @@ def image_callback(msg, args):
         # Undistort the image
         undistorted_image = undistort_fisheye(cv_image, K, D)
 
-        # Convert undistorted image back to ROS message and publish
-        undistorted_msg = bridge.cv2_to_compressed_imgmsg(undistorted_image)
+        # Get image dimensions
+        h, w = undistorted_image.shape[:2]
+
+        # Read parameters
+        image_scale = rospy.get_param("~image_scale", 1.0)
+        contrast_threshold = rospy.get_param("~contrast_threshold", 128)
+        print(f"Parameters - image_scale: {image_scale}, contrast_threshold: {contrast_threshold}")
+
+        # Resize the image
+        new_width = int(w * image_scale)
+        new_height = int(h * image_scale)
+        resized_image = cv2.resize(undistorted_image, (new_width, new_height))
+        print(f"Resized image to {new_width}x{new_height}")
+
+        # Convert to grayscale
+        gray_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
+
+        # Apply thresholding
+        ret, thresholded_image = cv2.threshold(
+            gray_image, contrast_threshold, 255, cv2.THRESH_BINARY
+        )
+        print(f"Applied thresholding with value {contrast_threshold}")
+
+        # Convert back to BGR
+        thresholded_image_bgr = cv2.cvtColor(thresholded_image, cv2.COLOR_GRAY2BGR)
+
+        # Convert processed image back to ROS message and publish
+        undistorted_msg = bridge.cv2_to_compressed_imgmsg(thresholded_image_bgr)
         undistorted_msg.header = msg.header  # Preserve the header
         undistorted_pub.publish(undistorted_msg)
-        print(f"Published undistorted image for {camera_name}.")
+        print(f"Published undistorted and processed image for {camera_name}.")
 
     except Exception as e:
         print(f"Error in image callback for {camera_name}: {e}")
@@ -83,9 +109,9 @@ def main():
     undistorted_right_pub = rospy.Publisher(undistorted_right_topic, CompressedImage, queue_size=10)
 
     # Subscribe to both camera topics
-    rospy.Subscriber(left_camera_topic, CompressedImage, image_callback, 
+    rospy.Subscriber(left_camera_topic, CompressedImage, image_callback,
                      (left_K, left_D, bridge, undistorted_left_pub, "left_camera"))
-    rospy.Subscriber(right_camera_topic, CompressedImage, image_callback, 
+    rospy.Subscriber(right_camera_topic, CompressedImage, image_callback,
                      (right_K, right_D, bridge, undistorted_right_pub, "right_camera"))
 
     print(f"Subscribed to {left_camera_topic} and {right_camera_topic}.")
