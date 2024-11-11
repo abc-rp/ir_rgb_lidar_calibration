@@ -52,8 +52,8 @@ def image_callback(msg, args):
         h, w = undistorted_image.shape[:2]
 
         # Read parameters
-        image_scale = rospy.get_param("~image_scale", 1.0)
-        contrast_threshold = rospy.get_param("~contrast_threshold", 128)
+        image_scale = float(rospy.get_param("~image_scale", 1.0))
+        contrast_threshold = int(rospy.get_param("~contrast_threshold", 128))
         print(f"Parameters - image_scale: {image_scale}, contrast_threshold: {contrast_threshold}")
 
         # Resize the image
@@ -62,20 +62,27 @@ def image_callback(msg, args):
         resized_image = cv2.resize(undistorted_image, (new_width, new_height))
         print(f"Resized image to {new_width}x{new_height}")
 
-        # Convert to grayscale
-        gray_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
+        if contrast_threshold == 0:
+            # No contrast adjustment
+            processed_image = resized_image
+            print("No contrast adjustment applied.")
+        else:
+            # Convert to grayscale
+            gray_image = cv2.cvtColor(resized_image, cv2.COLOR_BGR2GRAY)
 
-        # Apply thresholding
-        ret, thresholded_image = cv2.threshold(
-            gray_image, contrast_threshold, 255, cv2.THRESH_BINARY
-        )
-        print(f"Applied thresholding with value {contrast_threshold}")
+            # Apply thresholding
+            ret, thresholded_image = cv2.threshold(
+                gray_image, contrast_threshold, 255, cv2.THRESH_BINARY
+            )
+            print(f"Applied thresholding with value {contrast_threshold}")
 
-        # Convert back to BGR
-        thresholded_image_bgr = cv2.cvtColor(thresholded_image, cv2.COLOR_GRAY2BGR)
+            # Convert back to BGR
+            thresholded_image_bgr = cv2.cvtColor(thresholded_image, cv2.COLOR_GRAY2BGR)
+
+            processed_image = thresholded_image_bgr
 
         # Convert processed image back to ROS message and publish
-        undistorted_msg = bridge.cv2_to_compressed_imgmsg(thresholded_image_bgr)
+        undistorted_msg = bridge.cv2_to_compressed_imgmsg(processed_image)
         undistorted_msg.header = msg.header  # Preserve the header
         undistorted_pub.publish(undistorted_msg)
         print(f"Published undistorted and processed image for {camera_name}.")
